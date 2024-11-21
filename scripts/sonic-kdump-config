@@ -24,6 +24,7 @@ import shlex
 import sys
 import syslog
 import subprocess
+import platform
 
 from swsscommon.swsscommon import ConfigDBConnector
 from sonic_installer.bootloader import get_bootloader
@@ -31,6 +32,7 @@ from sonic_installer.common import IMAGE_PREFIX
 
 aboot_cfg_template ="/host/image-%s/kernel-cmdline"
 grub_cfg = "/host/grub/grub.cfg"
+proc_cmdline = "/proc/cmdline"
 kdump_cfg = "/etc/default/kdump-tools"
 kdump_mem_file = "/sys/kernel/kexec_crash_size"
 machine_cfg = "/host/machine.conf"
@@ -448,6 +450,7 @@ def cmd_kdump_enable(verbose, image):
     kdump_enabled = get_kdump_administrative_mode()
     memory = get_kdump_memory()
     num_dumps = get_kdump_num_dumps()
+    arch = platform.machine()
     if verbose:
         print("configDB: kdump_enabled=%d memory=[%s] num_nums=%d" % (kdump_enabled, memory, num_dumps))
 
@@ -456,6 +459,8 @@ def cmd_kdump_enable(verbose, image):
     elif open(machine_cfg, 'r').read().find('aboot_platform') >= 0:
         aboot_cfg = aboot_cfg_template % image
         return kdump_enable(verbose, kdump_enabled, memory, num_dumps, image, aboot_cfg)
+    elif ("aarch64" in arch):
+        return kdump_enable(verbose, kdump_enabled, memory, num_dumps, image, proc_cmdline)
     else:
         print("Feature not supported on this platform")
         return False
@@ -527,6 +532,7 @@ def cmd_kdump_disable(verbose):
     kdump_enabled = get_kdump_administrative_mode()
     memory = get_kdump_memory()
     num_dumps = get_kdump_num_dumps()
+    arch = platform.machine()
 
     if verbose:
         print("configDB: kdump_enabled=%d memory=[%s] num_nums=%d" % (kdump_enabled, memory, num_dumps))
@@ -536,6 +542,8 @@ def cmd_kdump_disable(verbose):
     elif open(machine_cfg, 'r').read().find('aboot_platform') >= 0:
         aboot_cfg = aboot_cfg_template % image
         return kdump_disable(verbose, image, aboot_cfg)
+    elif ("aarch64" in arch):
+        return kdump_disable(verbose, image, proc_cmdline)
     else:
         print("Feature not supported on this platform")
         return False
